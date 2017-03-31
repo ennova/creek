@@ -103,6 +103,12 @@ module Creek
                 unless cell.nil?
                   cells[cell] = convert(node.inner_xml, cell_type, cell_style_idx)
                 end
+              elsif (node.name.eql? 't') and (node.node_type.eql? opener)
+                unless cell.nil?
+                  node.read
+                  raise unless node.name == '#text'
+                  cells[cell] = node.value
+                end
               end
             end
           end
