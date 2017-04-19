@@ -106,7 +106,7 @@ module Creek
               elsif (node.name.eql? 't') and (node.node_type.eql? opener)
                 unless cell.nil?
                   node.read
-                  raise unless node.name == '#text'
+                  raise unless (node.name == '#text' || node.inner_xml == '')
                   cells[cell] = node.value
                 end
               end
