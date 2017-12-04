@@ -77,13 +77,25 @@ module Creek
           cell_type  = nil
           cell_style_idx = nil
           @book.files.file.open(path) do |xml|
+            nodePrefix = nil
             Nokogiri::XML::Reader.from_io(xml).each do |node|
-              if (node.name.eql? 'row') and (node.node_type.eql? opener)
+              if node.name =~ /^(.+):worksheet$/
+                nodePrefix = $1
+              end
+
+              nodeName = if nodePrefix
+                next unless node.name =~ /^#{Regexp.escape nodePrefix}:(.+)$/
+                $1
+              else
+                node.name
+              end
+
+              if (nodeName.eql? 'row') and (node.node_type.eql? opener)
                 row = node.attributes
                 row['cells'] = Hash.new
                 cells = Hash.new
                 y << (include_meta_data ? row : cells) if node.self_closing?
-              elsif (node.name.eql? 'row') and (node.node_type.eql? closer)
+              elsif (nodeName.eql? 'row') and (node.node_type.eql? closer)
                 processed_cells = fill_in_empty_cells(cells, row['r'], cell)
 
                 if @images_present
@@ -95,18 +107,18 @@ module Creek
 
                 row['cells'] = processed_cells
                 y << (include_meta_data ? row : processed_cells)
-              elsif (node.name.eql? 'c') and (node.node_type.eql? opener)
+              elsif (nodeName.eql? 'c') and (node.node_type.eql? opener)
                 cell_type      = node.attributes['t']
                 cell_style_idx = node.attributes['s']
                 cell           = node.attributes['r']
-              elsif (node.name.eql? 'v') and (node.node_type.eql? opener)
+              elsif (nodeName.eql? 'v') and (node.node_type.eql? opener)
                 unless cell.nil?
                   cells[cell] = convert(node.inner_xml, cell_type, cell_style_idx)
                 end
-              elsif (node.name.eql? 't') and (node.node_type.eql? opener)
+              elsif (nodeName.eql? 't') and (node.node_type.eql? opener)
                 unless cell.nil?
                   node.read
-                  raise unless (node.name == '#text' || node.inner_xml == '')
+                  raise unless (nodeName == '#text' || node.inner_xml == '')
                   cells[cell] = node.value
                 end
               end
